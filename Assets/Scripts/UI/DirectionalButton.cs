@@ -3,9 +3,8 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
-/// Угловая кнопка направления (A/W/S/D). Визуально реагирует на доступность
-/// направления из текущей позиции и перелёт. По клику вызывает
-/// OperatorPositionController.OnDirectionalButtonPressed — то же, что нажатие клавиши.
+/// Угловая кнопка A/W/S/D. Если направление недоступно — плавно исчезает
+/// и перестаёт ловить клики. Так UI не засоряется лишними кнопками.
 /// </summary>
 [RequireComponent(typeof(Button))]
 [RequireComponent(typeof(CanvasGroup))]
@@ -14,10 +13,7 @@ public class DirectionalButton : MonoBehaviour,
     IPointerDownHandler, IPointerUpHandler
 {
     [Header("Logic")]
-    [Tooltip("Какое направление соответствует этой кнопке.")]
     [SerializeField] private KeyCode _key = KeyCode.A;
-
-    [Tooltip("Ссылка на контроллер позиций.")]
     [SerializeField] private OperatorPositionController _controller;
 
     [Header("Visual")]
@@ -25,21 +21,21 @@ public class DirectionalButton : MonoBehaviour,
 
     [Range(0f, 1f)][SerializeField] private float _idleAlpha = 0.5f;
     [Range(0f, 1f)][SerializeField] private float _hoverAlpha = 0.85f;
-    [Range(0f, 1f)][SerializeField] private float _pressedAlpha = 1f;
-    [Range(0f, 1f)][SerializeField] private float _disabledAlpha = 0.15f;
-
-    [Tooltip("Скорость изменения прозрачности.")]
+    [Range(0f, 1f)][SerializeField] private float _pressedAlpha = 1.0f;
     [SerializeField] private float _fadeSpeed = 10f;
 
-    [Tooltip("Насколько кнопка уменьшается при нажатии (0.95 = 5%).")]
-    [Range(0.85f, 1f)]
-    [SerializeField] private float _pressScale = 0.95f;
+    [Tooltip("Полностью скрывать кнопку, когда направление недоступно. " +
+             "Снят — кнопка остаётся тусклой (прозрачность = _disabledAlpha).")]
+    [SerializeField] private bool _hideWhenUnavailable = true;
 
-    [Tooltip("Скорость изменения масштаба.")]
+    [Tooltip("Прозрачность недоступной кнопки, если _hideWhenUnavailable = false.")]
+    [Range(0f, 1f)][SerializeField] private float _disabledAlpha = 0.15f;
+
+    [Tooltip("Насколько кнопка уменьшается при нажатии.")]
+    [Range(0.85f, 1f)][SerializeField] private float _pressScale = 0.95f;
     [SerializeField] private float _scaleSpeed = 15f;
 
     [Header("Audio")]
-    [Tooltip("Опционально: звук нажатия.")]
     [SerializeField] private AudioSource _audioSource;
     [SerializeField] private AudioClip _pressSound;
 
@@ -48,6 +44,7 @@ public class DirectionalButton : MonoBehaviour,
     private RectTransform _rect;
     private bool _isHover;
     private bool _isPressed;
+    private bool _available = true;
 
     private void Awake()
     {
@@ -69,26 +66,54 @@ public class DirectionalButton : MonoBehaviour,
 
     private void Update()
     {
-        if (GameManager.Instance != null && GameManager.Instance.IsPaused)
+        if (_controller == null || _canvasGroup == null) return;
+
+        // Доступна ли кнопка сейчас?
+        bool available = !_controller.IsMoving
+                      && (GameManager.Instance == null || !GameManager.Instance.IsPaused)
+                      && _controller.IsDirectionAvailable(_key);
+
+        // Если стали недоступны — сбросить hover/pressed
+        if (!available)
         {
-            _canvasGroup.alpha = 0f;
-            return;
+            _isHover = false;
+            _isPressed = false;
         }
-        // Целевая прозрачность
+        _available = available;
+
+        // Целевая прозрачность и raycast
         float targetAlpha;
-        if (_controller.IsMoving || !_controller.IsDirectionAvailable(_key))
-            targetAlpha = _disabledAlpha;
-        else if (_isPressed)
-            targetAlpha = _pressedAlpha;
-        else if (_isHover)
-            targetAlpha = _hoverAlpha;
+        bool raycast;
+
+        if (!available)
+        {
+            if (_hideWhenUnavailable)
+            {
+                targetAlpha = 0f;
+                raycast = false;
+            }
+            else
+            {
+                targetAlpha = _disabledAlpha;
+                raycast = false;
+            }
+        }
         else
-            targetAlpha = _idleAlpha;
+        {
+            raycast = true;
+            if (_isPressed) targetAlpha = _pressedAlpha;
+            else if (_isHover) targetAlpha = _hoverAlpha;
+            else targetAlpha = _idleAlpha;
+        }
 
         _canvasGroup.alpha = Mathf.Lerp(
             _canvasGroup.alpha, targetAlpha, Time.deltaTime * _fadeSpeed);
 
-        // Нажатие — лёгкое сжатие
+        // Кнопка не должна ловить клики, пока невидима
+        _canvasGroup.blocksRaycasts = raycast;
+        _canvasGroup.interactable = raycast;
+
+        // Сжатие при нажатии
         float targetScale = _isPressed ? _pressScale : 1f;
         _rect.localScale = Vector3.Lerp(
             _rect.localScale, Vector3.one * targetScale, Time.deltaTime * _scaleSpeed);
@@ -98,6 +123,7 @@ public class DirectionalButton : MonoBehaviour,
     {
         if (_controller == null) return;
         if (_controller.IsMoving) return;
+        if (GameManager.Instance != null && GameManager.Instance.IsPaused) return;
         if (!_controller.IsDirectionAvailable(_key)) return;
 
         if (_audioSource != null && _pressSound != null)
@@ -108,8 +134,8 @@ public class DirectionalButton : MonoBehaviour,
 
     // ---- EventSystem ----
 
-    public void OnPointerEnter(PointerEventData e) => _isHover = true;
-    public void OnPointerExit(PointerEventData e) => _isHover = false;
-    public void OnPointerDown(PointerEventData e) => _isPressed = true;
-    public void OnPointerUp(PointerEventData e) => _isPressed = false;
+    public void OnPointerEnter(PointerEventData e) { if (_available) _isHover = true; }
+    public void OnPointerExit(PointerEventData e) { _isHover = false; }
+    public void OnPointerDown(PointerEventData e) { if (_available) _isPressed = true; }
+    public void OnPointerUp(PointerEventData e) { _isPressed = false; }
 }

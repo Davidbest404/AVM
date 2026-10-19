@@ -13,6 +13,6 @@ MonoBehaviour:
   m_Name: Phase_Start
   m_EditorClassIdentifier: 
   phaseName: "\u0424\u0430\u0437\u0430"
-  startTime: 0
+  startTime: 30
   endTime: 60
   eventInterval: 7

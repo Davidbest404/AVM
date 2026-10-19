@@ -102,6 +102,9 @@ public class CursorPeekCamera : MonoBehaviour
     {
         if (!_isEnabled || Cam == null) return;
 
+        // Пауза (ESC-меню): peek не должен реагировать на мышь
+        if (GameManager.Instance != null && GameManager.Instance.IsPaused) return;
+
         // 1. Позиция курсора → [-1, 1]
         Vector2 mouse = Input.mousePosition;
         Vector2 norm = new Vector2(

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   displayName: "\u0412\u0435\u043D\u0442\u0438\u043B\u044F\u0442\u043E\u0440 \u0437\u0430\u043A\u043B\u0438\u043D\u0438\u043B\u043E"
   description: 
-  weight: 10
-  minProgress: 0
+  weight: 3
+  minProgress: 20
   maxProgress: 100
   targetSystemName: Cooling

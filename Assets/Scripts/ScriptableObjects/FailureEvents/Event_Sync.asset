@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   displayName: "\u0421\u0438\u043D\u0443\u0441\u043E\u0438\u0434 \u0443\u0448\u0451\u043B"
   description: 
-  weight: 10
-  minProgress: 0
+  weight: 5
+  minProgress: 30
   maxProgress: 100
   targetSystemName: Sync

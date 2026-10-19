@@ -47,6 +47,7 @@ public class PauseMenu : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Escape))
         {
+            if (GameManager.Instance != null && GameManager.Instance.IsGameOver) return;
             if (_isOpen) CloseMenu();
             else OpenMenu();
         }
