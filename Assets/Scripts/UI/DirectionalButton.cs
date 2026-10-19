@@ -69,8 +69,11 @@ public class DirectionalButton : MonoBehaviour,
 
     private void Update()
     {
-        if (_controller == null || _canvasGroup == null) return;
-
+        if (GameManager.Instance != null && GameManager.Instance.IsPaused)
+        {
+            _canvasGroup.alpha = 0f;
+            return;
+        }
         // Целевая прозрачность
         float targetAlpha;
         if (_controller.IsMoving || !_controller.IsDirectionAvailable(_key))

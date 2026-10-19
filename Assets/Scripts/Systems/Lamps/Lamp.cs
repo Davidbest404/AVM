@@ -36,6 +36,10 @@ public class Lamp : MonoBehaviour
     public LampSocket Socket { get; private set; }
     public bool IsInstalled => Socket != null;
 
+    /// <summary>Компонент звука лампы (если есть). Кэшируется при первом обращении.</summary>
+    public LampAudio Audio => _audio ??= GetComponent<LampAudio>();
+    private LampAudio _audio;
+
     public event Action<Lamp, LampState> OnStateChanged;
 
     // ---- Внутреннее ----

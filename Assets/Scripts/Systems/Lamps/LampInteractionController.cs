@@ -52,7 +52,8 @@ public class LampInteractionController : MonoBehaviour
         }
 
         // Idle:
-        if (GameManager.Instance != null && GameManager.Instance.IsInputBlocked()) return;
+        if (GameManager.Instance != null
+            && (GameManager.Instance.IsInputBlocked() || GameManager.Instance.IsPaused)) return;
         if (_inputRouter == null || !_inputRouter.IsActive(OperatorPosition.Lamps)) return;
 
         HandleIdle();
@@ -95,6 +96,7 @@ public class LampInteractionController : MonoBehaviour
         _accumulatedPixels = 0f;
         _lastMousePos = Input.mousePosition;
         lamp.ResetUnwindVisual();
+        lamp.Audio?.SetUnwinding(true);
 
         if (_debugLog) Debug.Log($"[LampCtrl] BeginUnwind {lamp.name}");
     }
@@ -126,6 +128,7 @@ public class LampInteractionController : MonoBehaviour
     {
         if (_debugLog) Debug.Log("[LampCtrl] CancelUnwind");
         if (_unwindingLamp != null) _unwindingLamp.ResetUnwindVisual();
+        if (_unwindingLamp != null) _unwindingLamp.Audio?.SetUnwinding(false);
         _unwindingLamp = null;
         _accumulatedPixels = 0f;
         _state = InteractionState.Idle;
@@ -140,6 +143,7 @@ public class LampInteractionController : MonoBehaviour
 
         if (_debugLog) Debug.Log($"[LampCtrl] FinishUnwind {lamp.name}");
 
+        lamp.Audio?.SetUnwinding(false);
         lamp.DetachFromSocket();
         lamp.StartFalling();
         LampSystem.Instance?.NotifyLampsChanged();

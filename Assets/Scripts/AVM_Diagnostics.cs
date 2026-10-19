@@ -61,7 +61,7 @@ public class AVM_Diagnostics : MonoBehaviour
 
     private void DumpEvents()
     {
-        var gen = FindObjectOfType<EventGenerator>();
+        var gen = FindFirstObjectByType<EventGenerator>();
         if (gen == null)
         {
             Debug.LogError("[AVM_Diagnostics] EventGenerator не найден на сцене");

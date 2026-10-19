@@ -11,6 +11,7 @@ public class FanKnock : MonoBehaviour
     [SerializeField] private CoolingSystem _coolingSystem;
     [SerializeField] private OperatorInputRouter _inputRouter;
     [SerializeField] private Camera _camera;
+    [SerializeField] private FanAudio _fanAudio;
 
     [Header("Knock Chances")]
     [Range(0f, 1f)][SerializeField] private float _baseChance = 0.10f;
@@ -68,7 +69,8 @@ public class FanKnock : MonoBehaviour
             _coolingSystem.State != FanState.Overheating) return;
 
         if (_inputRouter != null && !_inputRouter.IsActive(OperatorPosition.Fan)) return;
-        if (GameManager.Instance != null && GameManager.Instance.IsInputBlocked()) return;
+        if (GameManager.Instance != null
+            && (GameManager.Instance.IsInputBlocked() || GameManager.Instance.IsPaused)) return;
 
         if (Input.GetMouseButtonDown(0) && IsMouseOver())
             OnKnock();
@@ -86,7 +88,22 @@ public class FanKnock : MonoBehaviour
         float chance = Mathf.Min(_maxChance, _baseChance + _hitStreak * _increasePerStreak);
         bool success = Random.value < chance;
 
-        if (_knockSound != null) _knockSound.Play();
+        if (_fanAudio == null) _fanAudio = FindFirstObjectByType<FanAudio>();
+
+        if (_fanAudio != null)
+        {
+            _fanAudio.PlayKnock();
+            if (_debugLog) Debug.Log("[FanKnock] Played via FanAudio");
+        }
+        else if (_knockSound != null)
+        {
+            _knockSound.Play();
+            if (_debugLog) Debug.Log("[FanKnock] Played via _knockSound");
+        }
+        else
+        {
+            if (_debugLog) Debug.LogWarning("[FanKnock] Нет ни FanAudio, ни _knockSound — стук без звука");
+        }
         _shakeTimer = _shakeDuration;
 
         if (_debugLog)

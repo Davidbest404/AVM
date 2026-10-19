@@ -58,8 +58,9 @@ public class TrackballMouse : MonoBehaviour
         FrameDelta = Vector2.zero;
 
         bool canInteract = (_inputRouter == null || _inputRouter.IsActive(OperatorPosition.Screen))
-                           && (GameManager.Instance == null || !GameManager.Instance.IsInputBlocked());
-
+                   && (GameManager.Instance == null
+                       || (!GameManager.Instance.IsInputBlocked()
+                           && !GameManager.Instance.IsPaused));
         // Начало захвата
         if (!_isGrabbed && canInteract && Input.GetMouseButtonDown(0) && IsMouseOver())
         {

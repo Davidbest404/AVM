@@ -13,6 +13,19 @@ public class TapeSystem : MonoBehaviour, IFailableSystem
     public TapeState State => _state;
     public bool IsRewinding => _isRewinding;
 
+    /// <summary>Текущая угловая скорость колеса (град/сек). Положительная — вперёд, отрицательная — назад, 0 — стоит.</summary>
+    public float CurrentSpinSpeed
+    {
+        get
+        {
+            if (_state == TapeState.Working)
+                return _isRewinding ? _rewindSpinSpeed : _workSpinSpeed;
+            if (_state == TapeState.Jammed)
+                return _isRewinding ? _rewindSpinSpeed : 0f;
+            return 0f;
+        }
+    }
+
     [Header("Debuff")]
     [Tooltip("Множитель скорости при полном зажевывании (N = Max).")]
     [Range(0f, 1f)]

@@ -20,6 +20,9 @@ public class CoolingSystem : MonoBehaviour, IFailableSystem
     public bool IsBroken => _state == FanState.Jammed || _state == FanState.Overheating;
     public FanState State => _state;
 
+    /// <summary>Текущая скорость лопастей (ед/сек).</summary>
+    public float CurrentSpin => _currentSpin;
+
     [Header("Timing")]
     [Tooltip("Секунд до перегрева после клина.")]
     [SerializeField] private float _overheatTime = 12f;

@@ -52,7 +52,8 @@ public class TapeRewindButton : MonoBehaviour
         if (_tapeSystem == null) return;
 
         // Не на позиции ленты — отпускаем
-        if (_inputRouter != null && !_inputRouter.IsActive(OperatorPosition.Tape))
+        if (_inputRouter != null && !_inputRouter.IsActive(OperatorPosition.Tape)
+            || (GameManager.Instance != null && GameManager.Instance.IsPaused))
         {
             if (_isHolding) ReleaseHold();
             UpdateEmission();
