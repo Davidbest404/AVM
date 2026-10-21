@@ -13,6 +13,15 @@ public class LampSystem : MonoBehaviour, IFailableSystem, IInputBlockingSystem
     public string SystemName => "Lamps";
     public bool IsBroken => CountWorking() == 0;
 
+    /// <summary>Сколько всего сокетов (лампомест).</summary>
+    public int TotalLampsCount => _sockets != null ? _sockets.Count : 0;
+
+    /// <summary>Сколько ламп сейчас в состоянии Working.</summary>
+    public int WorkingLampsCount => CountWorking();
+
+    /// <summary>Сколько ламп не Working (Damaged / Faulty / нет вовсе).</summary>
+    public int BrokenLampsCount => TotalLampsCount - WorkingLampsCount;
+
     [Header("Sockets")]
     [Tooltip("6 сокетов. Перетащить в инспекторе.")]
     [SerializeField] private List<LampSocket> _sockets = new();

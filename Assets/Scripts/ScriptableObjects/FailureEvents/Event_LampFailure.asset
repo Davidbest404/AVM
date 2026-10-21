@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   displayName: "\u041B\u0430\u043C\u043F\u0430 \u043F\u043E\u0432\u0440\u0435\u0436\u0434\u0435\u043D\u0430"
   description: 
-  weight: 4
+  weight: 1
   minProgress: 0
   maxProgress: 100
   targetSystemName: Lamps
