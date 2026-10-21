@@ -1,4 +1,4 @@
-Shader "AVM/CRTOscilloscope"
+п»їShader "AVM/CRTOscilloscope"
 {
     Properties
     {
@@ -31,6 +31,20 @@ Shader "AVM/CRTOscilloscope"
         _ColorLevels    ("Color Levels (PSX)", Range(2, 64)) = 16
         _DitherStrength ("Dither Strength", Range(0, 1)) = 1.0
         _PixelSize      ("Pixel Size (PSX)", Range(1, 8)) = 2
+
+        [Header(Dust and Grime)]
+        _DustColor        ("Dust Color", Color) = (0.55, 0.5, 0.45, 1)
+        _DustIntensity    ("Dust Intensity", Range(0, 2)) = 0.7
+        _DustScale        ("Dust Scale", Range(20, 400)) = 180
+        _DustEdgePower    ("Edge Concentration", Range(0.5, 4)) = 2.0
+        _SpotIntensity    ("Smudge Intensity", Range(0, 1)) = 0.5
+        _ScratchIntensity ("Scratch Intensity", Range(0, 1)) = 0.3
+
+        [Header(Geometry)]
+        _BulgeAmount    ("Bulge Amount (neg = dent)", Range(-0.2, 0.2)) = 0.03
+        _BulgeCenter    ("Bulge Center (UV)", Vector) = (0.5, 0.5, 0, 0)
+        _BulgeRadius    ("Bulge Radius (0.1..2)", Range(0.1, 2.0)) = 1.0
+        _BulgeSharpness ("Bulge Sharpness (1=linear 2=soft 4=sharp)", Range(0.5, 6.0)) = 2.0
     }
 
     SubShader
@@ -62,6 +76,7 @@ Shader "AVM/CRTOscilloscope"
             struct Attributes
             {
                 float4 positionOS : POSITION;
+                float3 normalOS   : NORMAL;
                 float2 uv         : TEXCOORD0;
             };
 
@@ -94,9 +109,18 @@ Shader "AVM/CRTOscilloscope"
                 float  _ColorLevels;
                 float  _DitherStrength;
                 float  _PixelSize;
+                float4 _DustColor;
+                float  _DustIntensity;
+                float  _DustScale;
+                float  _DustEdgePower;
+                float  _SpotIntensity;
+                float  _ScratchIntensity;
+                float  _BulgeAmount;
+                float4 _BulgeCenter;
+                float  _BulgeRadius;
+                float  _BulgeSharpness;
             CBUFFER_END
 
-            // 4x4 Bayer matrix, нормализованная в 0..1
             static const float bayer4[16] = {
                 0.0/16.0,  8.0/16.0,  2.0/16.0, 10.0/16.0,
                12.0/16.0,  4.0/16.0, 14.0/16.0,  6.0/16.0,
@@ -107,7 +131,15 @@ Shader "AVM/CRTOscilloscope"
             Varyings vert(Attributes IN)
             {
                 Varyings OUT;
-                OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
+
+                float2 delta = (IN.uv - _BulgeCenter.xy) / max(0.001, _BulgeRadius);
+                float r2 = saturate(dot(delta, delta));
+                float bulge = pow(saturate(1.0 - r2), _BulgeSharpness);
+
+                float3 posOS = IN.positionOS.xyz;
+                posOS += IN.normalOS * bulge * _BulgeAmount;
+
+                OUT.positionHCS = TransformObjectToHClip(posOS);
                 OUT.uv = IN.uv;
                 return OUT;
             }
@@ -137,15 +169,22 @@ Shader "AVM/CRTOscilloscope"
                 return saturate(core + glow);
             }
 
+            float fbm3(float2 p)
+            {
+                float v = 0.0;
+                v += hash21(p * 1.0)         * 0.5;
+                v += hash21(p * 2.0 + 13.0)  * 0.3;
+                v += hash21(p * 4.0 + 37.0)  * 0.2;
+                return v;
+            }
+
             half4 frag(Varyings IN) : SV_Target
             {
                 float time = _Time.y;
                 float2 uv = CurveUV(IN.uv, _Curvature);
 
-                // Пикселизация (PSX) — квантуем UV до сетки
                 float2 screenSize = _ScreenParams.xy;
                 float2 pixelUV = floor(uv * screenSize / _PixelSize) * _PixelSize / screenSize;
-                // Используем сглаженный UV для волны, но пиксельный для финальной сетки/шума
                 float2 waveUV = uv;
 
                 if (pixelUV.x < 0.0 || pixelUV.x > 1.0 || pixelUV.y < 0.0 || pixelUV.y > 1.0)
@@ -153,28 +192,23 @@ Shader "AVM/CRTOscilloscope"
 
                 float phase = _PhaseSpeed * time * 6.2831;
 
-                // Призрак — целевая волна
                 float ghost = DrawWave(
                     waveUV, _BaseFrequency, _BaseAmplitude, phase,
                     _LineThickness * _GhostThickness);
 
-                // Реальная волна
                 float waveReal = DrawWave(
                     waveUV, _WaveFrequency, _WaveAmplitude, phase,
                     _LineThickness);
 
-                // Сетка (на пиксельном UV — для чёткого PSX-вида)
                 float gridX = smoothstep(0.9, 1.0, abs(sin(pixelUV.x * 40.0)));
                 float gridY = smoothstep(0.9, 1.0, abs(sin(pixelUV.y * 20.0)));
                 float gridPattern = saturate(gridX + gridY) * _GridIntensity;
 
-                // Скан-линии, шум, мерцание
                 float scan = sin(pixelUV.y * _ScanlineCount * 3.14159) * 0.5 + 0.5;
                 float scanMask = 1.0 - _ScanlineIntensity + _ScanlineIntensity * scan;
                 float noise = (hash21(pixelUV * 500.0 + time) - 0.5) * _NoiseAmount;
                 float flicker = 1.0 - _FlickerAmount * hash21(float2(time, 0));
 
-                // Сборка
                 float3 col = float3(0, 0, 0);
                 col += _GridColor.rgb  * gridPattern;
                 col += _GhostColor.rgb * ghost * _GhostIntensity;
@@ -183,7 +217,6 @@ Shader "AVM/CRTOscilloscope"
                 col *= flicker;
                 col += noise * _WaveColor.rgb * 0.3;
 
-                // Виньетка
                 float2 centered = pixelUV - 0.5;
                 float vig = pow(saturate(1.0 - dot(centered, centered) * _VignettePower * 2.0), 1.5);
                 col *= vig;
@@ -191,17 +224,44 @@ Shader "AVM/CRTOscilloscope"
                 float afterglow = smoothstep(0.05, 0.0, abs(pixelUV.y - 0.5)) * 0.1;
                 col += _WaveColor.rgb * afterglow;
 
-                // ============ PSX DITHER + QUANTIZE ============
-                // Определяем позицию пикселя в матрице Байера
+                if (_DustIntensity > 0.001)
+                {
+                    float2 cv = pixelUV - 0.5;
+                    float edgeRaw = saturate(dot(cv, cv) * 2.5);
+                    float edgeFactor = pow(edgeRaw, _DustEdgePower);
+
+                    float2 dustUV = pixelUV * _DustScale + float2(time * 0.03, time * 0.02);
+                    float fineDustNoise = hash21(dustUV);
+                    float fineDust = smoothstep(0.72, 0.95, fineDustNoise);
+                    float microDust = smoothstep(0.85, 0.98, hash21(dustUV * 2.3 + 7.0));
+                    float dustMask = (fineDust * 0.7 + microDust * 0.3);
+
+                    float2 spotUV = pixelUV * _DustScale * 0.15;
+                    float spotNoise = fbm3(spotUV);
+                    float spots = smoothstep(0.62, 0.88, spotNoise) * _SpotIntensity;
+
+                    float colID = floor(pixelUV.x * 80.0);
+                    float colRandom = hash21(float2(colID, 7.0));
+                    float isScratchColumn = step(0.92, colRandom);
+                    float withinColumn = frac(pixelUV.x * 80.0);
+                    float scratchLine = smoothstep(0.45, 0.55, withinColumn) * (1.0 - smoothstep(0.55, 0.65, withinColumn));
+                    float scratchNoise = hash21(float2(colID, floor(pixelUV.y * 40.0)));
+                    float scratchMask = isScratchColumn * scratchLine * step(0.6, scratchNoise) * _ScratchIntensity;
+
+                    float totalGrime = saturate(
+                        dustMask  * _DustIntensity * edgeFactor
+                        + spots   * _DustIntensity * edgeFactor
+                        + scratchMask * _DustIntensity);
+
+                    col = lerp(col, _DustColor.rgb, totalGrime * 0.65);
+                }
+
                 int2 px = int2(pixelUV * screenSize / _PixelSize);
-                int bx = px.x & 3;  // % 4
+                int bx = px.x & 3;
                 int by = px.y & 3;
                 float dither = bayer4[by * 4 + bx] - 0.5;
 
-                // Добавляем дизеринг перед квантованием
                 col += dither * _DitherStrength / _ColorLevels;
-
-                // Квантование до _ColorLevels уровней
                 col = floor(col * _ColorLevels + 0.5) / _ColorLevels;
 
                 return half4(saturate(col), 1.0);
