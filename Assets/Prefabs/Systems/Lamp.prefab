@@ -52237,6 +52237,9 @@ MonoBehaviour:
   _damagedColor: {r: 1, g: 0.5882353, b: 0, a: 0.5882353}
   _faultyColor: {r: 1, g: 0, b: 0, a: 0.19607843}
   _damagedBlinkSpeed: 1
+  _offColor: {r: 0.1, g: 0.1, b: 0.12, a: 1}
+  _offMaterial: {fileID: 2100000, guid: e3f0187396d40954eb4acac1bbc96a17, type: 2}
+  _offEmissionIntensity: 0
   _damagedToFaultyTime: 15
   _unwindLiftHeight: 0.01
   _fallDuration: 1.5

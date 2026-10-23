@@ -140,6 +140,7 @@ public class LampSystem : MonoBehaviour, IFailableSystem, IInputBlockingSystem
 
     public void NotifyLampsChanged() => RecalculateState();
 
+    // CountWorking — уже корректно:
     private int CountWorking()
     {
         int n = 0;

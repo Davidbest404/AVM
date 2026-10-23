@@ -18,6 +18,13 @@ public class Lamp : MonoBehaviour
     [SerializeField] private Color _faultyColor = new Color(0.05f, 0.05f, 0.05f);
     [Range(0f, 1f)][SerializeField] private float _damagedBlinkSpeed = 3f;
 
+    [Header("Off State")]
+    [Tooltip("Цвет материала, когда лампа выключена (не вставлена).")]
+    [SerializeField] private Color _offColor = new Color(0.1f, 0.1f, 0.12f);
+    [SerializeField] private Material _offMaterial;
+    [Tooltip("Интенсивность эмиссии в выключенном состоянии (0 = не светится).")]
+    [SerializeField] private float _offEmissionIntensity = 0f;
+
     [Header("Damage")]
     [Tooltip("Сколько секунд Damaged → Faulty.")]
     [SerializeField] private float _damagedToFaultyTime = 15f;
@@ -77,6 +84,11 @@ public class Lamp : MonoBehaviour
         State = s;
         _damagedTimer = 0f;
         ApplyColor();
+
+        // В выключенном состоянии коллайдер отключаем — нельзя кликнуть
+        if (_collider != null)
+            _collider.enabled = s != LampState.Off;
+
         OnStateChanged?.Invoke(this, s);
     }
 
@@ -115,9 +127,9 @@ public class Lamp : MonoBehaviour
             Socket.ClearLamp();
             Socket = null;
         }
-        // worldPositionStays: true сохраняет и позицию, и масштаб в мире
         transform.SetParent(_originalParent, worldPositionStays: true);
-        if (_collider != null) _collider.enabled = false; // падающая лампа не кликабельна
+        if (_collider != null) _collider.enabled = false;
+        SetState(LampState.Off); // ← добавить
     }
 
     // ---- Выкручивание ----
@@ -176,6 +188,16 @@ public class Lamp : MonoBehaviour
             case LampState.Working: SetBulbColor(_workingColor * 2f); break;
             case LampState.Damaged: SetBulbColor(_damagedColor * 2f); break;
             case LampState.Faulty: SetBulbColor(_faultyColor); break;
+            case LampState.Off:
+                if (_offMaterial != null && _bulbRenderer != null)
+                {
+                    _bulbRenderer.sharedMaterial = _offMaterial;
+                }
+                else
+                {
+                    SetBulbColor(_offColor * _offEmissionIntensity);
+                }
+                break;
         }
     }
 

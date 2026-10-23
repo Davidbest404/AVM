@@ -66,7 +66,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26e71a2dddbdb51419337ca7faf6559b, type: 3}
   m_Name: PixelateRendererFeature
   m_EditorClassIdentifier: 
-  m_Active: 1
+  m_Active: 0
   settings:
     material: {fileID: 2100000, guid: 9754a09eacc6c9c4b85327639f708cac, type: 2}
     renderPassEvent: 600
@@ -105,7 +105,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b00045f12942b46c698459096c89274e, type: 3}
   m_Name: FullScreenPassRendererFeature
   m_EditorClassIdentifier: 
-  m_Active: 1
+  m_Active: 0
   injectionPoint: 600
   fetchColorBuffer: 1
   requirements: 0
